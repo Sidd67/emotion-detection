@@ -15,6 +15,18 @@ Detects 7 emotions live from your webcam — on PC or mobile — via WebSockets.
 
 ---
 
+## 🖥️ Live Demo Screenshot
+
+<div align="center">
+
+![EmotionAI Running](./screenshot.png)
+
+*Real-time emotion detection — Happy detected at 94.2% confidence with live distribution panel*
+
+</div>
+
+---
+
 ## ✨ Features
 
 - 🎯 **7-Class Emotion Detection** — Angry, Disgust, Fear, Happy, Sad, Surprise, Neutral
