@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EmotionAI — Mobile Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --green:#10b981; --red:#ef4444; --blue:#3b82f6; --purple:#8b5cf6; }
+    html, body { height: 100%; width: 100%; background: #050a14; font-family: 'Inter',sans-serif; color: #e2e8f0; overflow: hidden; }
+
+    /* ── OVERLAY ─────────────────────────────── */
+    #overlay {
+      position: fixed; inset: 0; z-index: 300; background: #050a14;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+      transition: opacity 0.5s;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    .over-icon { font-size: 60px; animation: float 2.5s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .over-title { font-size: 26px; font-weight: 800; background: linear-gradient(90deg,#60a5fa,#c084fc); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    .over-status { font-size: 14px; color: #475569; display: flex; align-items: center; gap: 8px; }
+    .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(99,102,241,0.3); border-top-color: #6366f1; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #start-btn {
+      padding: 14px 40px; border-radius: 999px; border: none;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff; font-size: 16px; font-weight: 700; font-family: 'Inter',sans-serif;
+      cursor: pointer; box-shadow: 0 8px 32px rgba(59,130,246,0.4); display: none;
+    }
+
+    /* ── SCANNER LAYOUT ─────────────────────── */
+    #scanner { position: fixed; inset: 0; display: flex; flex-direction: column; }
+
+    /* Camera wrap: centers the viewport block */
+    .cam-wrap {
+      position: relative; flex: 1; overflow: hidden;
+      background: #050a14; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* The viewport block holding video + canvas together */
+    #cam-viewport {
+      position: relative;
+      width: 85%; max-height: 60vh; aspect-ratio: 3/4;
+      border-radius: 24px; overflow: hidden;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+    }
+
+    #cam-video {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transform: scaleX(-1); /* mirror front cam */
+    }
+    #cam-video.back-cam { transform: scaleX(1); }
+
+    /* Bounding box canvas perfectly on top of video */
+    #bbox-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    /* No face overlay */
+    #no-face {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+      border-radius: 24px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #no-face.visible { opacity: 1; }
+    .nf-icon { font-size: 40px; }
+    .nf-text { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+    .nf-sub  { font-size: 11px; color: #94a3b8; }
+
+    /* ── TOP BAR ─────────────────────────────── */
+    .top-bar {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      padding: 14px 16px;
+      background: linear-gradient(to bottom, rgba(5,10,20,0.85), transparent);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .top-brand { font-size: 15px; font-weight: 700; color: #60a5fa; display: flex; align-items: center; gap: 6px; }
+    .fps-badge {
+      font-size: 11px; font-weight: 600; font-family: monospace;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 4px 10px; color: #64748b;
+    }
+
+    /* ── FLIP BUTTON ─────────────────────────── */
+    #flip-btn {
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
+      width: 42px; height: 42px; border-radius: 50%; border: none;
+      background: rgba(15,23,42,0.85); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e2e8f0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.15s;
+    }
+    #flip-btn:active { transform: scale(0.9); background: rgba(59,130,246,0.3); }
+    #flip-btn svg { width: 20px; height: 20px; }
+
+    /* ── BOTTOM PANEL ────────────────────────── */
+    .bottom {
+      padding: 16px; gap: 12px; display: flex; flex-direction: column;
+      background: linear-gradient(to top, rgba(5,10,20,0.97) 80%, transparent);
+      position: relative; z-index: 10;
+    }
+    .emo-chip {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 14px 18px;
+      transition: background 0.4s, border-color 0.4s;
+    }
+    .emo-chip.ok { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
+    .emo-left { display: flex; align-items: center; gap: 12px; }
+    .emo-emoji { font-size: 32px; }
+    .emo-name  { font-size: 17px; font-weight: 700; }
+    .emo-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .conf-wrap { flex: 1; margin-left: 14px; }
+    .conf-label { font-size: 11px; color: #64748b; margin-bottom: 4px; text-align: right; }
+    .conf-bg { background: rgba(255,255,255,0.07); border-radius: 999px; height: 5px; overflow: hidden; }
+    .conf-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#3b82f6,#8b5cf6); transition: width 0.4s; width: 0%; }
+
+    .status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+    .s-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; transition: background 0.3s; }
+    .s-dot.ok  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .s-dot.err { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+    #status-msg { color: #64748b; flex: 1; transition: color 0.3s; }
+
+    /* ── TOAST ───────────────────────────────── */
+    #toasts {
+      position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+      z-index: 400; display: flex; flex-direction: column; gap: 8px; align-items: center;
+      width: 90%; max-width: 380px; pointer-events: none;
+    }
+    .toast {
+      width: 100%; background: rgba(15,23,42,0.96); border-radius: 14px;
+      padding: 11px 16px; display: flex; align-items: center; gap: 10px;
+      border-left: 3px solid var(--red); backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transform: translateY(-16px); opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+    }
+    .toast.ok-t { border-left-color: var(--green); }
+    .toast.show  { transform: translateY(0); opacity: 1; }
+    .t-ico { font-size: 18px; }
+    .t-msg { font-size: 13px; font-weight: 500; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div class="over-icon">🧠</div>
+  <div class="over-title">EmotionAI</div>
+  <div class="over-status">
+    <div class="spin"></div>
+    <span id="over-msg">Starting camera…</span>
+  </div>
+  <button id="start-btn" onclick="tryStartCamera()">▶ Allow Camera &amp; Start</button>
+</div>
+
+<!-- SCANNER -->
+<div id="scanner">
+  <div class="cam-wrap">
+    <!-- Top bar sits above the viewport block -->
+    <div class="top-bar">
+      <div class="top-brand">🧠 EmotionAI</div>
+      <div class="fps-badge" id="fps">── FPS</div>
+    </div>
+
+    <!-- Single viewport: video + canvas overlay + no-face overlay -->
+    <div id="cam-viewport">
+      <video id="cam-video" playsinline autoplay muted></video>
+      <canvas id="bbox-canvas"></canvas>
+      <div id="no-face">
+        <div class="nf-icon">👤</div>
+        <div class="nf-text">No face detected</div>
+        <div class="nf-sub">Position your face in the frame</div>
+      </div>
+      <!-- Camera flip button inside viewport -->
+      <button id="flip-btn" onclick="flipCamera()" title="Switch Camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom emotion panel -->
+  <div class="bottom">
+    <div class="emo-chip" id="emo-chip">
+      <div class="emo-left">
+        <div class="emo-emoji" id="emo-emoji">🔍</div>
+        <div>
+          <div class="emo-name" id="emo-name">Scanning…</div>
+          <div class="emo-sub" id="emo-sub">Waiting for face</div>
+        </div>
+      </div>
+      <div class="conf-wrap">
+        <div class="conf-label" id="conf-label">0%</div>
+        <div class="conf-bg"><div class="conf-fill" id="conf-fill"></div></div>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="s-dot" id="s-dot"></div>
+      <span id="status-msg">Connecting…</span>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- TensorFlow.js + BlazeFace (client-side face detection) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+
+<script>
+/* ─── Constants ─────────────────────────────────── */
+const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+const WS_URL = `${wsProtocol}://${location.host}/ws`;
+
+const EMOJI = { angry:'😡',disgust:'🤢',fear:'😨',happy:'😄',sad:'😢',surprise:'😲',neutral:'😐' };
+const T_ICO  = { no_face:'👤',multiple_faces:'👥',distance:'📏',lighting:'💡',success:'✅' };
+
+/* ─── State ──────────────────────────────────────── */
+let socket, fpsCount=0, fpsTime=Date.now(), inflightFrames=0, lastSendTime=0;
+let lastStatus='', activeToast=null, toastTimer=null, dingPlayed=false;
+let facingMode = 'user';
+let currentStream = null;
+let blazeModel = null;
+let animFrameId = null;
+let sendCanvas = null, sendCtx = null;
+
+const $ = id => document.getElementById(id);
+
+/* ─── UI helpers ─────────────────────────────────── */
+function setDot(s){ const d=$('s-dot'); d.className='s-dot'+(s==='ok'?' ok':s==='err'?' err':''); }
+
+function showToast(type, msg, ok){
+  if(activeToast){ try{activeToast.remove();}catch(e){} activeToast=null; }
+  const t = document.createElement('div');
+  t.className = 'toast'+(ok?' ok-t':'');
+  t.innerHTML = `<span class="t-ico">${T_ICO[type]||'⚠️'}</span><span class="t-msg">${msg}</span>`;
+  $('toasts').appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  activeToast = t;
+  if(toastTimer) clearTimeout(toastTimer);
+  if(!ok){ toastTimer = setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),300); }, 3000); }
+}
+
+function playDing(){
+  try{
+    const ctx = new(window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type='sine'; o.frequency.value=880;
+    g.gain.setValueAtTime(0.3,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.6);
+    o.start(); o.stop(ctx.currentTime+0.6);
+  }catch(_){}
+}
+
+function updateFPS(){ fpsCount++; if(Date.now()-fpsTime>=1000){$('fps').textContent=fpsCount+' FPS';fpsCount=0;fpsTime=Date.now();} }
+
+function updateEmotion(data){
+  const emo=(data.emotion||'').toLowerCase();
+  $('emo-emoji').textContent=EMOJI[emo]||'😐';
+  $('emo-name').textContent=data.emotion||'..';
+  const c=data.confidence||0;
+  $('conf-fill').style.width=c+'%';
+  $('conf-label').textContent=c.toFixed(1)+'%';
+  $('emo-sub').textContent=`Detected · ${c.toFixed(1)}% confidence`;
+  $('emo-chip').classList.add('ok');
+}
+function resetEmotion(){
+  $('emo-emoji').textContent='🔍'; $('emo-name').textContent='Scanning…';
+  $('emo-sub').textContent='Waiting for face';
+  $('conf-fill').style.width='0%'; $('conf-label').textContent='0%';
+  $('emo-chip').className='emo-chip'; $('emo-chip').style=''; $('conf-fill').style='';
+}
+
+/* ─── WebSocket ──────────────────────────────────── */
+function connectWS(){
+  socket = new WebSocket(WS_URL);
+  socket.onopen  = ()=>{ setDot('ok'); $('status-msg').textContent='Connected · scanning…'; };
+  socket.onerror = ()=>{ setDot('err'); $('status-msg').textContent='WebSocket error'; };
+  socket.onclose = ()=>{ setDot(''); $('status-msg').textContent='Reconnecting…'; inflightFrames=0; setTimeout(connectWS,2500); };
+  socket.onmessage = (evt)=>{
+    inflightFrames = Math.max(0, inflightFrames - 1);
+    updateFPS();
+    const data = JSON.parse(evt.data);
+    // We display LOCAL video (zero lag) — don't use data.frame for display
+    if(data.status === 'success'){
+      if(lastStatus !== 'success'){ showToast('success','✅ Face detected!',true); if(!dingPlayed){playDing();dingPlayed=true;} }
+      updateEmotion(data);
+      setDot('ok'); $('status-msg').textContent=`${data.emotion} · ${(data.confidence||0).toFixed(1)}%`;
+      $('status-msg').style.color='#10b981';
+      lastStatus='success';
+    } else if(data.status === 'error'){
+      dingPlayed=false;
+      if(lastStatus !== data.type) showToast(data.type, data.message, false);
+      resetEmotion();
+      setDot('err'); $('status-msg').textContent=data.message;
+      $('status-msg').style.color='#ef4444';
+      lastStatus=data.type;
+    }
+  };
+}
+
+/* ─── BlazeFace bounding boxes ───────────────────── */
+const bboxCanvas = $('bbox-canvas');
+const bboxCtx = bboxCanvas.getContext('2d');
+
+function drawBBox(preds, videoEl){
+  bboxCtx.clearRect(0, 0, bboxCanvas.width, bboxCanvas.height);
+  if(!preds || preds.length === 0) return;
+
+  const isFront = facingMode === 'user';
+
+  // ── object-fit:cover mapping ──────────────────────────────────────────
+  // BlazeFace coords are in the video's NATURAL pixel space.
+  // The canvas is the same CSS size as the video element, but object-fit:cover
+  // scales and center-crops the natural frame. Compute that transform.
+  const natW = videoEl.videoWidth  || bboxCanvas.width;
+  const natH = videoEl.videoHeight || bboxCanvas.height;
+  const dispW = bboxCanvas.width;
+  const dispH = bboxCanvas.height;
+
+  // Scale that cover uses (fills the display, may crop one axis)
+  const scale = Math.max(dispW / natW, dispH / natH);
+  // Offset from cropping (the part of the scaled image that is off-screen)
+  const offX = (natW * scale - dispW) / 2;
+  const offY = (natH * scale - dispH) / 2;
+
+  // Map a point from natural-video space → canvas/display space
+  function mapX(x){ return x * scale - offX; }
+  function mapY(y){ return y * scale - offY; }
+  // ─────────────────────────────────────────────────────────────────────
+
+  preds.forEach(pred => {
+    const [x1, y1] = pred.topLeft;
+    const [x2, y2] = pred.bottomRight;
+
+    let bx = mapX(x1);
+    const by = mapY(y1);
+    const bw = mapX(x2) - bx;
+    const bh = mapY(y2) - by;
+
+    // Mirror horizontally for front cam (CSS does scaleX(-1) on the video)
+    if(isFront) bx = dispW - bx - bw;
+
+    // Glowing box
+    bboxCtx.save();
+    bboxCtx.shadowColor='#10b981'; bboxCtx.shadowBlur=12;
+    bboxCtx.strokeStyle='#10b981'; bboxCtx.lineWidth=2.5;
+    bboxCtx.strokeRect(bx, by, bw, bh);
+
+    // Corner accents
+    const cs = Math.min(bw,bh)*0.22;
+    bboxCtx.lineWidth=3.5; bboxCtx.strokeStyle='#34d399'; bboxCtx.shadowBlur=8;
+    [[bx,by+cs,bx,by,bx+cs,by],[bx+bw-cs,by,bx+bw,by,bx+bw,by+cs],
+     [bx,by+bh-cs,bx,by+bh,bx+cs,by+bh],[bx+bw-cs,by+bh,bx+bw,by+bh,bx+bw,by+bh-cs]]
+    .forEach(([x1,y1,x2,y2,x3,y3])=>{
+      bboxCtx.beginPath(); bboxCtx.moveTo(x1,y1); bboxCtx.lineTo(x2,y2); bboxCtx.lineTo(x3,y3); bboxCtx.stroke();
+    });
+
+    // Key points
+    if(pred.landmarks){
+      pred.landmarks.forEach(([lx,ly])=>{
+        let px = mapX(lx);
+        const py = mapY(ly);
+        if(isFront) px = dispW - px;
+        bboxCtx.save(); bboxCtx.fillStyle='rgba(96,165,250,0.75)'; bboxCtx.shadowColor='#3b82f6'; bboxCtx.shadowBlur=6;
+        bboxCtx.beginPath(); bboxCtx.arc(px,py,3,0,Math.PI*2); bboxCtx.fill(); bboxCtx.restore();
+      });
+    }
+    bboxCtx.restore();
+  });
+}
+
+/* ─── Main camera loop ───────────────────────────── */
+async function cameraLoop(videoEl){
+  if(videoEl.readyState >= 2){
+    // Sync bbox canvas size to actual rendered video element
+    const vw = bboxCanvas.offsetWidth || videoEl.videoWidth;
+    const vh = bboxCanvas.offsetHeight || videoEl.videoHeight;
+    if(bboxCanvas.width !== vw || bboxCanvas.height !== vh){ bboxCanvas.width=vw; bboxCanvas.height=vh; }
+
+    // ── Client-side BlazeFace detection (zero-lag bounding boxes) ──
+    if(blazeModel && videoEl.videoWidth > 0){
+      try {
+        const preds = await blazeModel.estimateFaces(videoEl, false);
+        const faceCount = preds.length;
+        drawBBox(preds, videoEl);
+        if(faceCount === 0) $('no-face').classList.add('visible');
+        else               $('no-face').classList.remove('visible');
+      } catch(e){ /* skip frame */ }
+    }
+
+    // ── Send frame to server for emotion prediction ──
+    if(sendCanvas && socket?.readyState === WebSocket.OPEN){
+      const now = Date.now();
+      if((now - lastSendTime > 66) && inflightFrames < 2){
+        lastSendTime = now;
+        inflightFrames++;
+        sendCtx.drawImage(videoEl, 0, 0, sendCanvas.width, sendCanvas.height);
+        const b64 = sendCanvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+        socket.send(JSON.stringify({frame: b64}));
+      }
+    }
+  }
+  animFrameId = requestAnimationFrame(()=>cameraLoop(videoEl));
+}
+
+/* ─── Start camera ───────────────────────────────── */
+async function tryStartCamera(){
+  $('over-msg').textContent = 'Requesting camera…';
+  $('start-btn').style.display = 'none';
+
+  if(!window.isSecureContext){
+    $('over-msg').textContent = 'Requires HTTPS. Open via tunnel on mobile.';
+    $('start-btn').style.display='block'; $('start-btn').textContent='🔄 Retry'; return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia){
+    $('over-msg').textContent = 'Camera API not supported on this browser.';
+    $('start-btn').style.display='block'; $('start-btn').textContent='🔄 Retry'; return;
+  }
+
+  try {
+    if(currentStream) currentStream.getTracks().forEach(t=>t.stop());
+    if(animFrameId) cancelAnimationFrame(animFrameId);
+
+    currentStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode, width:{ideal:480}, height:{ideal:640} }, audio:false
+    });
+
+    const vid = $('cam-video');
+    vid.srcObject = currentStream;
+    if(facingMode === 'user') vid.classList.remove('back-cam');
+    else vid.classList.add('back-cam');
+    await vid.play();
+
+    // Offscreen canvas for sending frames to server
+    sendCanvas = document.createElement('canvas');
+    sendCanvas.width=320; sendCanvas.height=240;
+    sendCtx = sendCanvas.getContext('2d');
+
+    // Load BlazeFace model in background
+    if(!blazeModel){
+      $('over-msg').textContent = 'Loading AI model…';
+      blazeface.load().then(m=>{ blazeModel=m; console.log('BlazeFace loaded'); }).catch(e=>console.warn('BlazeFace load failed:',e));
+    }
+
+    $('over-msg').textContent = 'Connecting to server…';
+    connectWS();
+
+    setTimeout(()=>{
+      const ov=$('overlay');
+      ov.classList.add('hidden');
+      setTimeout(()=>ov.style.display='none',500);
+      cameraLoop(vid); // start combined loop
+    }, 1000);
+
+  } catch(err){
+    let msg = 'Camera access denied. Allow from browser settings.';
+    if(err.name==='NotAllowedError')   msg='Camera access denied. Please allow it.';
+    if(err.name==='NotReadableError')  msg='Camera is busy or not detectable.';
+    if(err.name==='OverconstrainedError') msg='This camera mode not supported on your device.';
+    $('over-msg').textContent = msg;
+    $('start-btn').style.display='block'; $('start-btn').textContent='🔄 Retry';
+  }
+}
+
+/* ─── Flip camera ─────────────────────────────────── */
+function flipCamera(){
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  tryStartCamera();
+}
+
+/* ─── Auto start ─────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', tryStartCamera);
+</script>
+</body>
+</html>

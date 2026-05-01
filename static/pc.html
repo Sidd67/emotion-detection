@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmotionAI — PC Camera</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #050a14; font-family: 'Inter',sans-serif;
+      color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .nav-brand { font-size: 17px; font-weight: 700; color: #60a5fa; display: flex; align-items: center; gap: 8px; }
+    .nav-actions { display: flex; gap: 10px; }
+    .btn-sm {
+      padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05); color: #94a3b8;
+      font-size: 13px; font-family: 'Inter',sans-serif; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-sm:hover { border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
+    .fps-pill {
+      padding: 6px 12px; border-radius: 999px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+      font-size: 12px; font-weight: 600; font-family: monospace; color: #64748b;
+    }
+
+    /* LAYOUT */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* VIDEO SIDE */
+    .video-side {
+      flex: 1; position: relative; background: #020610; overflow: hidden;
+    }
+    #cam-feed {
+      width: 100%; height: 100%; object-fit: contain; display: block;
+    }
+    /* scan-line effect */
+    .scan-line {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
+      animation: scan 3s linear infinite;
+    }
+    @keyframes scan { from { top: 0; } to { top: 100%; } }
+
+    /* face guide box */
+    .face-guide {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: min(280px, 50%); aspect-ratio: 3/4;
+      border: 2px dashed rgba(59,130,246,0.3);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    /* top bar on video */
+    .vid-top {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 16px;
+      background: linear-gradient(to bottom, rgba(5,10,20,0.7), transparent);
+      pointer-events: none;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(20,28,46,0.85); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px; font-weight: 500; color: #94a3b8;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #475569; transition: background 0.3s; }
+    .status-dot.ok  { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .status-dot.err { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+    /* PANEL SIDE */
+    .panel {
+      display: none;
+      width: 320px; flex-shrink: 0;
+      flex-direction: column; gap: 16px;
+      padding: 20px;
+      background: rgba(255,255,255,0.02);
+      border-left: 1px solid rgba(255,255,255,0.05);
+      overflow-y: auto;
+    }
+
+    .panel-section { display: flex; flex-direction: column; gap: 10px; }
+    .panel-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: #334155; text-transform: uppercase; }
+
+    /* Emotion display */
+    .emotion-box {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px; padding: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: border-color 0.4s, background 0.4s;
+    }
+    .emotion-box.success { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+    .emo-top { display: flex; align-items: center; gap: 14px; }
+    .emo-emoji { font-size: 40px; line-height: 1; }
+    .emo-label { font-size: 22px; font-weight: 800; }
+    .emo-sub   { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .conf-row  { display: flex; align-items: center; gap: 10px; }
+    .conf-bar-bg { flex: 1; background: rgba(255,255,255,0.06); border-radius: 999px; height: 6px; overflow: hidden; }
+    .conf-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#3b82f6,#8b5cf6); transition: width 0.5s ease; width: 0%; }
+    .conf-pct { font-size: 13px; font-weight: 700; color: #60a5fa; min-width: 36px; text-align: right; }
+
+    /* Validation list */
+    .checks { display: flex; flex-direction: column; gap: 8px; }
+    .check-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px; transition: all 0.3s;
+    }
+    .check-item.ok  { background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.2); color: #10b981; }
+    .check-item.err { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.2); color: #ef4444; }
+    .check-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* QR Fallback panel */
+    #qr-panel {
+      background: rgba(139,92,246,0.07); border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 16px; padding: 20px;
+      display: none; flex-direction: column; align-items: center; gap: 14px; text-align: center;
+    }
+    #qr-panel.show { display: flex; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    #qr-panel img { width: 130px; height: 130px; border-radius: 10px; background: #fff; padding: 8px; }
+    .qr-hint { font-size: 12px; color: #64748b; line-height: 1.6; }
+    .qr-title { font-size: 14px; font-weight: 700; color: #c084fc; }
+
+    /* TOAST */
+    #toast-area {
+      position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+      z-index: 500; display: flex; flex-direction: column; gap: 8px; align-items: center;
+      width: 380px; pointer-events: none;
+    }
+    .toast {
+      width: 100%; background: rgba(15,23,42,0.95); border-radius: 14px;
+      padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+      border-left: 3px solid #ef4444; backdrop-filter: blur(8px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(-14px); opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s;
+    }
+    .toast.success-t { border-left-color: #10b981; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-ico { font-size: 18px; }
+    .toast-msg { font-size: 13px; font-weight: 500; color: #cbd5e1; }
+    
+    /* ANALYTICS PANEL */
+    #analytics-panel {
+      position: absolute; top: 20px; right: -320px; width: 260px;
+      background: rgba(15,23,42,0.85); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+      padding: 16px; transition: right 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 100; display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    #analytics-panel.show { right: 20px; }
+    .dist-row { display: flex; flex-direction: column; gap: 6px; }
+    .dist-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 0.5px;}
+    .dist-bar-bg { width: 100%; background: rgba(255,255,255,0.06); height: 8px; border-radius: 999px; overflow: hidden; }
+    .dist-bar-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; width: 0%; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">🧠 EmotionAI <span style="font-weight:300;color:#334155;">/ PC Mode</span></div>
+  <div class="nav-actions">
+    <span class="fps-pill" id="fps">── FPS</span>
+    <button class="btn-sm" onclick="toggleAnalytics()" style="color:#60a5fa; border-color:rgba(96,165,250,0.3);">📊 View All %</button>
+    <button class="btn-sm" onclick="window.location='/'">← Back</button>
+    <button class="btn-sm" onclick="showQRPanel()">📱 Switch to Mobile</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Video -->
+  <div class="video-side">
+    <div class="scan-line" id="scan-line"></div>
+    <div class="face-guide" id="face-guide"></div>
+    <img id="cam-feed" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="cam">
+
+    <div class="vid-top">
+      <div class="status-pill">
+        <span class="status-dot" id="dot"></span>
+        <span id="vid-status">Initializing camera…</span>
+      </div>
+    </div>
+    
+    <!-- Floating Distribution Panel -->
+    <div id="analytics-panel">
+      <h4 style="margin-bottom:4px; font-size:14px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+        Live Distribution
+        <span style="font-size:10px; padding:2px 8px; background:rgba(255,255,255,0.1); border-radius:10px; font-weight:normal; cursor:pointer;" onclick="toggleAnalytics()">Close</span>
+      </h4>
+      <div id="dist-container" style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <!-- Dynamic Rows -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel -->
+  <div class="panel">
+    <div class="panel-section">
+      <div class="panel-label">Emotion</div>
+      <div class="emotion-box" id="emo-box">
+        <div class="emo-top">
+          <div class="emo-emoji" id="emo-emoji">🔍</div>
+          <div>
+            <div class="emo-label" id="emo-label">Scanning…</div>
+            <div class="emo-sub" id="emo-sub">Waiting for face</div>
+          </div>
+        </div>
+        <div class="conf-row">
+          <div class="conf-bar-bg"><div class="conf-bar-fill" id="conf-fill"></div></div>
+          <div class="conf-pct" id="conf-pct">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Validation</div>
+      <div class="checks" id="checks">
+        <div class="check-item" id="chk-face"><span class="check-icon">👤</span> Face Detected</div>
+        <div class="check-item" id="chk-dist"><span class="check-icon">📏</span> Distance OK</div>
+        <div class="check-item" id="chk-light"><span class="check-icon">💡</span> Lighting Good</div>
+        <div class="check-item" id="chk-center"><span class="check-icon">🎯</span> Face Centered</div>
+        <div class="check-item" id="chk-blur"><span class="check-icon">🌫️</span> Sharpness OK</div>
+      </div>
+    </div>
+
+    <div id="qr-panel">
+      <div class="qr-title">📱 Having trouble? Try Mobile</div>
+      
+      <div id="lt-prompt-pc" style="text-align:left; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; width:100%; margin:15px 0;">
+        <div style="font-size:12px; color:#cbd5e1; margin-bottom:10px;">Run <b>npx localtunnel --port 8000</b> and paste your loca.lt link here:</div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="ltUrlPC" placeholder="https://xyz.loca.lt" style="flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:#0f172a; color:#fff; font-size:12px; outline:none;" />
+          <button onclick="applyLTPC()" style="padding:0 12px; border-radius:8px; font-weight:600; font-size:12px; border:none; background:linear-gradient(90deg,#8b5cf6,#3b82f6); color:#fff; cursor:pointer;">Set</button>
+        </div>
+      </div>
+
+      <div id="qrContainerPC" style="display:none; flex-direction:column; align-items:center; width:100%;">
+        <img id="qr-img" src="" alt="QR" style="width: 150px; height: 150px; border-radius: 10px; background: #fff; padding: 8px;">
+        <div class="qr-hint" id="qr-hint-text" style="margin-top:10px;">Scan this QR to continue securely on your phone.</div>
+        <div id="tunnelPasswordPC" style="display:none; margin-top:10px; font-size:12px; color:#fca5a5; font-weight:700; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); padding:10px; border-radius:8px; width:100%; text-align:center;"></div>
+        <div style="font-size:11px;color:#475569;font-family:monospace;word-break:break-all; margin-top:10px;" id="qr-url"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+const WS_URL = `${wsProtocol}://${location.host}/ws?client=pc`;
+
+const EMOJI = {
+  angry:'😡', disgust:'🤢', fear:'😨', happy:'😄',
+  sad:'😢', surprise:'😲', neutral:'😐'
+};
+const TOAST_ICO = {
+  no_face:'👤', multiple_faces:'👥', distance:'📏',
+  lighting:'💡', position:'🎯', blur:'🌫️', success:'✅'
+};
+
+let socket, stream;
+let frameCount = 0, fpsCount = 0, fpsTime = Date.now();
+let noFaceFrames = 0, lastStatus = '';
+let activeToast = null, toastTimer = null;
+
+// ── UTILS ──────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+function setCheck(id, state) {
+  const el = $(id);
+  el.className = 'check-item' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+}
+function resetChecks() {
+  ['chk-face','chk-dist','chk-light','chk-center','chk-blur'].forEach(id => setCheck(id,''));
+}
+
+function setDot(state) {
+  const dot = $('dot');
+  dot.className = 'status-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+}
+
+function showToast(type, msg, isSuccess) {
+  const area = $('toast-area');
+  if (activeToast) { activeToast.classList.remove('show'); setTimeout(()=>activeToast?.remove(),300); }
+  const t = document.createElement('div');
+  t.className = 'toast' + (isSuccess ? ' success-t' : '');
+  t.innerHTML = `<span class="toast-ico">${TOAST_ICO[type]||'⚠️'}</span><span class="toast-msg">${msg}</span>`;
+  area.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  activeToast = t;
+  if (toastTimer) clearTimeout(toastTimer);
+  if (!isSuccess) { toastTimer = setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),300); }, 3000); }
+}
+
+function hideToast() {
+  const t = document.getElementById('toast');
+  if(t) {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 400);
+  }
+}
+
+// Analytics Panel toggler
+function toggleAnalytics() {
+  const p = document.getElementById('analytics-panel');
+  p.classList.toggle('show');
+}
+
+function playDing() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.6);
+    osc.start(); osc.stop(ctx.currentTime+0.6);
+  } catch(_) {}
+}
+
+function updateFPS() {
+  fpsCount++;
+  if (Date.now()-fpsTime >= 1000) {
+    $('fps').textContent = fpsCount + ' FPS';
+    fpsCount = 0; fpsTime = Date.now();
+  }
+}
+
+// ── EMOTION UI ─────────────────────────────────────────────
+let dingPlayed = false;
+function updateEmotion(data) {
+  const emo = (data.emotion||'').toLowerCase();
+  $('emo-emoji').textContent = EMOJI[emo] || '😐';
+  $('emo-label').textContent = data.emotion || 'Scanning…';
+  const c = data.confidence || 0;
+  $('conf-fill').style.width = c + '%';
+  $('conf-pct').textContent = c.toFixed(1) + '%';
+  $('emo-sub').textContent = `Detected · ${c.toFixed(1)}% confidence`;
+  $('emo-box').classList.add('success');
+
+  // Render Distribution Panel
+  if(data.distribution) {
+    const container = document.getElementById('dist-container');
+    const sorted = Object.entries(data.distribution).sort((a,b) => b[1] - a[1]);
+    let html = '';
+    for(let [emot, pct] of sorted) {
+      let color = 'linear-gradient(90deg, #3b82f6, #06b6d4)'; // default blue
+      if(emot === 'Happy') color = 'linear-gradient(90deg, #10b981, #34d399)';
+      if(['Angry', 'Disgust', 'Fear'].includes(emot)) color = 'linear-gradient(90deg, #ef4444, #f87171)';
+      if(emot === 'Surprise') color = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+      
+      html += `
+        <div class="dist-row">
+          <div class="dist-label">
+            <span>${emot}</span>
+            <span style="color:#94a3b8; font-family:monospace;">${pct.toFixed(1)}%</span>
+          </div>
+          <div class="dist-bar-bg">
+            <div class="dist-bar-fill" style="width: ${pct}%; background: ${color};"></div>
+          </div>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+  }
+}
+function resetEmotion() {
+  $('emo-emoji').textContent = '🔍';
+  $('emo-label').textContent = 'Scanning…';
+  $('emo-sub').textContent = 'Waiting for face';
+  $('conf-fill').style.width = '0%';
+  $('conf-pct').textContent = '0%';
+  $('emo-box').classList.remove('success');
+}
+
+function applyLTPC() {
+  const val = $('ltUrlPC').value.trim();
+  if (!val || !val.startsWith("https://") || !val.includes(".loca.lt")) { 
+    alert("Enter valid HTTPS loca.lt URL"); return; 
+  }
+  let baseUrl = val.endsWith('/') ? val.slice(0, -1) : val;
+  localStorage.setItem("ltUrl", baseUrl);
+  
+  const finalUrl = baseUrl + '/mobile';
+  $('qrContainerPC').style.display = 'flex';
+  $('qr-img').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" + encodeURIComponent(finalUrl);
+  $('qr-url').textContent = finalUrl;
+  $('qr-hint-text').innerText = "Scan this QR code. If asked for a tunnel password, use the IP below:";
+  
+  fetch('/lt-password')
+    .then(r => r.json())
+    .then(data => {
+        const pwdEl = $('tunnelPasswordPC');
+        pwdEl.style.display = 'block';
+        pwdEl.innerHTML = `⚠️ Tunnel Password: <b style="font-size:16px;color:#fff;font-family:monospace;letter-spacing:2px;background:#050a14;padding:6px 10px;border-radius:6px;margin-left:6px;">${data.ip.trim()}</b>`;
+    }).catch(e => console.log('Password fetch failed:', e));
+}
+
+function showQRPanel() {
+  const panel = $('qr-panel');
+  if(panel.classList.contains('show')) return;
+  panel.classList.add('show');
+  
+  const saved = localStorage.getItem("ltUrl");
+  if(saved) {
+      $('ltUrlPC').value = saved;
+      applyLTPC();
+  }
+}
+
+// ── WEBSOCKET ──────────────────────────────────────────────
+function connectWS() {
+  socket = new WebSocket(WS_URL);
+  socket.onopen = () => { setDot('ok'); $('vid-status').textContent = 'Connected · Scanning…'; };
+  socket.onerror = () => { setDot('err'); $('vid-status').textContent = 'WebSocket error'; };
+  socket.onclose = () => { setDot(''); $('vid-status').textContent = 'Reconnecting…'; setTimeout(connectWS, 2500); };
+
+  socket.onmessage = (evt) => {
+    const data = JSON.parse(evt.data);
+    updateFPS();
+
+    if (data.frame) {
+      $('cam-feed').src = 'data:image/jpeg;base64,' + data.frame;
+    }
+
+    resetChecks();
+
+    if (data.status === 'success') {
+      noFaceFrames = 0;
+      setCheck('chk-face','ok'); setCheck('chk-dist','ok');
+      setCheck('chk-light','ok'); setCheck('chk-center','ok'); setCheck('chk-blur','ok');
+      setDot('ok'); $('vid-status').textContent = `${data.emotion} · ${(data.confidence||0).toFixed(1)}% confidence`;
+
+      if (lastStatus !== 'success') {
+        showToast('success', '✅ Face detected!', true);
+        if (!dingPlayed) { playDing(); dingPlayed = true; }
+      }
+      updateEmotion(data);
+      lastStatus = 'success';
+
+    } else if (data.status === 'error') {
+      dingPlayed = false;
+      setDot('err'); $('vid-status').textContent = data.message;
+      resetEmotion();
+
+      if (data.type !== lastStatus) showToast(data.type, data.message, false);
+      lastStatus = data.type;
+
+      // Validate checks
+      if (data.type === 'no_face') { setCheck('chk-face','err'); noFaceFrames++; }
+      else { setCheck('chk-face','ok'); noFaceFrames = 0; }
+      if (data.type === 'distance') setCheck('chk-dist','err');
+      if (data.type === 'lighting') setCheck('chk-light','err');
+      if (data.type === 'position') setCheck('chk-center','err');
+      if (data.type === 'blur')     setCheck('chk-blur','err');
+
+      // Auto QR fallback after 5s of no face
+      if (noFaceFrames > 25) showQRPanel();
+    }
+  };
+}
+
+// ── CAMERA ─────────────────────────────────────────────────
+async function startCamera() {
+  if (!window.isSecureContext) {
+    $('vid-status').textContent = 'Camera requires secure connection (HTTPS).';
+    setDot('err');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $('vid-status').textContent = 'Camera API not supported.';
+    setDot('err');
+    return;
+  }
+  
+  $('vid-status').textContent = 'Initializing camera…';
+  setDot('');
+  
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }, audio: false
+    });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.setAttribute('playsinline',''); video.setAttribute('autoplay','');
+    await video.play();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 640; canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+
+    function loop() {
+      frameCount++;
+      ctx.drawImage(video, 0, 0, 640, 480);
+      if (frameCount % 4 === 0 && socket?.readyState === WebSocket.OPEN) {
+        const b64 = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
+        socket.send(JSON.stringify({ frame: b64 }));
+      }
+      setTimeout(loop, 50);
+    }
+    loop();
+    connectWS();
+    $('scan-line').style.display = 'block';
+    $('face-guide').style.display = 'block';
+    
+    // Hide retry button if it exists
+    const retryBtn = $('pc-retry-btn');
+    if(retryBtn) retryBtn.style.display = 'none';
+
+  } catch(err) {
+    let msg = 'Camera access denied. Please allow camera from browser settings and refresh.';
+    if (err.name === 'NotAllowedError') msg = 'Camera access was denied. Please allow it.';
+    if (err.name === 'NotReadableError') msg = 'Camera is busy or not detectable by the browser.';
+    if (err.name === 'OverconstrainedError') msg = 'Camera requirements cannot be met by your device.';
+
+    $('vid-status').textContent = msg;
+    setDot('err');
+    
+    // Show Retry action
+    let retryBtn = $('pc-retry-btn');
+    if (!retryBtn) {
+       retryBtn = document.createElement('button');
+       retryBtn.id = 'pc-retry-btn';
+       retryBtn.className = 'btn-sm';
+       retryBtn.style.marginLeft = '10px';
+       retryBtn.textContent = '🔄 Retry';
+       retryBtn.onclick = startCamera;
+       $('vid-status').parentNode.appendChild(retryBtn);
+    } else {
+       retryBtn.style.display = 'inline-block';
+    }
+    
+    // Auto-show QR if camera denied
+    setTimeout(showQRPanel, 1500);
+  }
+}
+
+startCamera();
+</script>
+</body>
+</html>

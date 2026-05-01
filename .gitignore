@@ -1,0 +1,95 @@
+# ============================================
+# EmotionAI — .gitignore
+# ============================================
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# ---- Virtual Environments ----
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ---- Distribution / Build ----
+dist/
+build/
+*.egg-info/
+*.egg
+.eggs/
+
+# ---- Machine Learning Models (large files) ----
+# NOTE: emotion_mini_xception.h5 is small (~870KB) so it IS included
+# The large models below are excluded:
+emotion_model.keras
+emotion_model.pth
+
+# ---- Dataset Folders (too large for GitHub) ----
+train/
+test/
+
+# ---- Logs & Debug ----
+*.log
+traceback.log
+lt_output.txt
+*.txt
+!requirements.txt
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- OS Files ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Jupyter Notebooks ----
+.ipynb_checkpoints/
+
+# ---- Coverage & Testing ----
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# ---- LaTeX Build Artifacts ----
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.nav
+*.snm
+*.vrb
+# Keep source .tex files (they are tracked)
+
+# ---- Temporary Files ----
+*.tmp
+*.temp
+*.bak
+
+# ---- Secrets (never commit these!) ----
+.env
+.env.local
+.env.production
+secrets.py
+config_secret.py
+
+# ---- QR / Generated Images ----
+d1.png

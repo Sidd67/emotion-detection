@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emotion AI Interface</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at 10% 20%, rgb(14, 18, 26) 0%, rgb(11, 25, 44) 90%);
+      color: #e2e8f0;
+      overflow: hidden;
+    }
+
+    /* Ambient background glowing circles */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: rgba(37, 99, 235, 0.15);
+      filter: blur(80px);
+      border-radius: 50%;
+      z-index: -1;
+    }
+    body::before { top: 10%; left: 15%; }
+    body::after { bottom: 10%; right: 15%; background: rgba(147, 51, 234, 0.15); }
+
+    .container {
+      width: 800px;
+      padding: 35px;
+      border-radius: 24px;
+      background: rgba(30, 41, 59, 0.4);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      margin-bottom: 25px;
+      font-weight: 700;
+      font-size: 32px;
+      background: linear-gradient(to right, #60a5fa, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #0f172a;
+    }
+
+    #liveFrame { width: 100%; display: block; }
+
+    .status-panel {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .status-box, .emotion-box {
+      flex: 1;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255,255,255,0.05);
+      font-size: 18px;
+      font-weight: 600;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .emotion-box {
+      font-size: 24px;
+      color: #fff;
+    }
+
+    /* Modal Styles */
+    #warningModal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 100;
+    }
+
+    #warningModal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: rgba(30, 41, 59, 0.95);
+      padding: 30px;
+      border-radius: 20px;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      transform: translateY(20px);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      max-width: 80%;
+    }
+
+    #warningModal.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      color: #f43f5e;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    #warningText {
+      font-size: 16px;
+      color: #cbd5e1;
+      margin-bottom: 20px;
+    }
+
+    .ok-btn {
+      display: none; /* Hidden by default now */
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>AI Emotion Interface</h1>
+
+  <div class="video-container">
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <img id="liveFrame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
+
+    <!-- WARNING MODAL -->
+    <div id="warningModal">
+      <div class="modal-content">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">Attention Required</div>
+        <div id="warningText">Please adjust your lighting or distance.</div>
+        <button class="ok-btn" id="okBtn">Got it, resume!</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-panel">
+    <div class="status-box" id="status">Connecting to Backend...</div>
+    <div class="emotion-box" id="emotion">Awaiting Signal...</div>
+  </div>
+</div>
+
+<script>
+const statusText = document.getElementById("status");
+const emotionText = document.getElementById("emotion");
+const liveFrame = document.getElementById("liveFrame");
+const video = document.getElementById("video");
+const warningModal = document.getElementById("warningModal");
+const warningText = document.getElementById("warningText");
+const okBtn = document.getElementById("okBtn");
+
+const emojiMap = {
+  angry: "😡", disgust: "🤢", fear: "😨",
+  happy: "😀", neutral: "😐", sad: "😢", surprise: "😲"
+};
+
+const emotionColors = {
+  happy: "linear-gradient(135deg, #f59e0b, #d97706)",
+  sad: "linear-gradient(135deg, #3b82f6, #2563eb)",
+  angry: "linear-gradient(135deg, #ef4444, #dc2626)",
+  surprise: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+  fear: "linear-gradient(135deg, #475569, #334155)",
+  disgust: "linear-gradient(135deg, #10b981, #059669)",
+  neutral: "linear-gradient(135deg, #64748b, #475569)"
+};
+
+let socket;
+let currentState = "none";
+let successTimeout = null;
+
+// OK Button acts just as a manual hide if they want, but we hide it via code anyway
+okBtn.addEventListener("click", () => {
+  warningModal.classList.remove("active");
+});
+
+function connectWebSocket() {
+  socket = new WebSocket("ws://127.0.0.1:8000/ws");
+
+  socket.onopen = () => {
+    statusText.innerText = "Connection Established ✅";
+    statusText.style.color = "#10b981";
+    startCamera();
+  };
+
+  socket.onerror = () => {
+    statusText.innerText = "Connection Error ❌";
+    statusText.style.color = "#ef4444";
+  };
+
+  socket.onclose = () => {
+    statusText.innerText = "Reconnecting... 🔄";
+    statusText.style.color = "#eab308";
+    setTimeout(connectWebSocket, 2000);
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    // Update video frame
+    if (data.frame) {
+      liveFrame.src = "data:image/jpeg;base64," + data.frame;
+    }
+
+    if (data.status === "error") {
+        currentState = "error";
+        warningModal.classList.add("active");
+        document.querySelector(".modal-content").style.border = "1px solid rgba(244, 63, 94, 0.4)";
+        document.querySelector(".modal-content").style.boxShadow = "0 20px 40px rgba(244, 63, 94, 0.15)";
+        document.querySelector(".modal-title").innerText = "Attention Required";
+        document.querySelector(".modal-title").style.color = "#f43f5e";
+        document.querySelector(".modal-icon").innerText = "⚠️";
+        warningText.innerText = data.message;
+        
+        okBtn.style.display = "none"; // Hide ok button
+        if(successTimeout) { clearTimeout(successTimeout); successTimeout = null; }
+
+        emotionText.innerText = "Awaiting Signal...";
+        emotionText.style.background = "linear-gradient(135deg, #475569, #334155)";
+
+    } else if (data.status === "success") {
+        if (currentState !== "success") {
+             currentState = "success";
+             // Show green modal once
+             warningModal.classList.add("active");
+             document.querySelector(".modal-content").style.border = "1px solid rgba(16, 185, 129, 0.4)";
+             document.querySelector(".modal-content").style.boxShadow = "0 20px 40px rgba(16, 185, 129, 0.15)";
+             document.querySelector(".modal-title").innerText = "Validation Passed";
+             document.querySelector(".modal-title").style.color = "#10b981";
+             document.querySelector(".modal-icon").innerText = "✅";
+             warningText.innerText = data.message;
+             okBtn.style.display = "none";
+
+             if(successTimeout) clearTimeout(successTimeout);
+             successTimeout = setTimeout(() => {
+                 warningModal.classList.remove("active");
+             }, 2000);
+        }
+        
+        // Normal emotion updates
+        if (data.emotion) {
+            const emo = data.emotion.toLowerCase().replace(" ", "");
+            if (emojiMap[emo]) {
+                emotionText.innerText = `Detected: ${data.emotion} ${emojiMap[emo]}`;
+                emotionText.style.background = emotionColors[emo];
+            } else {
+                emotionText.innerText = data.emotion;
+                emotionText.style.background = "linear-gradient(135deg, #475569, #334155)";
+            }
+        }
+    }
+  };
+}
+
+connectWebSocket();
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 320, height: 240 }
+    });
+
+    video.srcObject = stream;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 320;
+    canvas.height = 240;
+
+    // Make sendFrame globally accessible
+    window.sendFrame = function() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+          setTimeout(window.sendFrame, 120);
+          return;
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame = canvas.toDataURL("image/jpeg", 0.5).split(",")[1];
+      socket.send(JSON.stringify({ frame }));
+
+      setTimeout(window.sendFrame, 120);
+    }
+
+    // Start loop
+    window.sendFrame();
+
+  } catch (err) {
+    console.error(err);
+    statusText.innerText = "Camera Blocked ❌";
+    statusText.style.color = "#ef4444";
+  }
+}
+</script>
+</body>
+</html>

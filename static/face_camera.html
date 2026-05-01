@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Face Detection Camera</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --green: #10b981;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --bg: #05080f;
+    }
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow: hidden;
+    }
+
+    /* ── PERMISSION SCREEN ───────────────────── */
+    #perm-screen {
+      position: fixed; inset: 0; z-index: 500;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px; padding: 32px;
+      text-align: center;
+      transition: opacity 0.4s;
+    }
+    #perm-screen.hidden { opacity: 0; pointer-events: none; }
+    .perm-icon { font-size: 64px; animation: float 2.5s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .perm-title {
+      font-size: 24px; font-weight: 800;
+      background: linear-gradient(90deg, #60a5fa, #c084fc);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .perm-desc { font-size: 14px; color: #64748b; max-width: 280px; line-height: 1.6; }
+    #perm-btn {
+      padding: 14px 40px; border-radius: 999px; border: none;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: #fff; font-size: 16px; font-weight: 700;
+      font-family: 'Inter', sans-serif; cursor: pointer;
+      box-shadow: 0 8px 32px rgba(59,130,246,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #perm-btn:hover { transform: scale(1.04); box-shadow: 0 12px 40px rgba(59,130,246,0.55); }
+    #perm-error { font-size: 13px; color: var(--red); display: none; margin-top: -8px; }
+
+    /* ── MAIN WRAPPER ─────────────────────────── */
+    #app {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+
+    /* ── CAMERA VIEWPORT ─────────────────────── */
+    #cam-container {
+      position: relative;
+      width: 88%;
+      max-width: 400px;
+      aspect-ratio: 3/4;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1.5px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+
+    #video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1); /* Mirror front-cam by default */
+    }
+    #video.back-cam { transform: scaleX(1); }
+
+    #canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+
+    /* ── NO FACE OVERLAY ─────────────────────── */
+    #no-face-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
+      border-radius: 28px;
+      transition: opacity 0.3s;
+      opacity: 0; pointer-events: none;
+    }
+    #no-face-overlay.visible { opacity: 1; }
+    .nf-icon { font-size: 44px; }
+    .nf-text {
+      font-size: 16px; font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.02em;
+    }
+    .nf-sub { font-size: 12px; color: #94a3b8; }
+
+    /* ── FACE COUNT CHIP ─────────────────────── */
+    .cam-badge {
+      position: absolute; top: 14px; left: 14px;
+      background: rgba(5,8,15,0.75); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; color: #94a3b8;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.3s;
+    }
+    .cam-badge.face-on { color: #10b981; border-color: rgba(16,185,129,0.3); }
+    .cam-badge .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #475569; transition: background 0.3s;
+    }
+    .cam-badge.face-on .dot {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { box-shadow: 0 0 6px #10b981; }
+      50%      { box-shadow: 0 0 14px #10b981; }
+    }
+
+    /* ── LOADING CHIP ─────────────────────────── */
+    .cam-badge-right {
+      position: absolute; top: 14px; right: 14px;
+      background: rgba(5,8,15,0.75); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px; padding: 5px 12px;
+      font-size: 11px; font-weight: 600; color: #475569;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mini-spin {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid rgba(99,102,241,0.3);
+      border-top-color: #6366f1;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    .mini-spin.active { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── CONTROLS ─────────────────────────────── */
+    .controls {
+      width: 88%; max-width: 400px;
+      margin-top: 20px;
+      display: flex; justify-content: center; gap: 16px;
+    }
+    .ctrl-btn {
+      flex: 1;
+      padding: 13px; border-radius: 16px; border: none;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #e2e8f0; font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.15); }
+    .ctrl-btn svg { width: 18px; height: 18px; }
+
+    /* ── BOTTOM BRAND ─────────────────────────── */
+    .brand-bar {
+      margin-top: 18px;
+      font-size: 12px; color: #1e293b;
+      font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+<!-- PERMISSION SCREEN -->
+<div id="perm-screen">
+  <div class="perm-icon">📷</div>
+  <div class="perm-title">Camera Access</div>
+  <p class="perm-desc">We need camera access to run real-time face detection. No data is stored or sent to any server.</p>
+  <button id="perm-btn" onclick="startCamera()">Allow Camera & Continue</button>
+  <div id="perm-error">Camera access denied. Please allow it from browser settings.</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div id="cam-container">
+    <!-- Video feed -->
+    <video id="video" playsinline autoplay muted></video>
+
+    <!-- Detection canvas (bounding boxes) -->
+    <canvas id="canvas"></canvas>
+
+    <!-- No face overlay -->
+    <div id="no-face-overlay">
+      <div class="nf-icon">👤</div>
+      <div class="nf-text">No face detected</div>
+      <div class="nf-sub">Position your face in the frame</div>
+    </div>
+
+    <!-- Status chips -->
+    <div class="cam-badge" id="face-badge">
+      <div class="dot"></div>
+      <span id="face-count-label">Scanning…</span>
+    </div>
+    <div class="cam-badge-right" id="model-badge">
+      <div class="mini-spin active" id="model-spin"></div>
+      <span id="model-label">Loading AI…</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn" id="flip-btn" onclick="flipCamera()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 7h-9"/><path d="M14 17H5"/><polyline points="17 4 20 7 17 10"/><polyline points="7 14 4 17 7 20"/>
+      </svg>
+      Flip Camera
+    </button>
+    <button class="ctrl-btn" id="torch-btn" onclick="toggleTorch()" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 6l-2 4h-4l-2 4h4l-2 4 8-6h-4z"/>
+      </svg>
+      Torch
+    </button>
+  </div>
+
+  <div class="brand-bar">FaceDetect · Powered by TensorFlow.js</div>
+</div>
+
+<!-- TensorFlow.js + BlazeFace CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.18.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+
+<script>
+let model = null;
+let currentStream = null;
+let facingMode = 'user';
+let animFrame = null;
+let torchOn = false;
+
+const video    = document.getElementById('video');
+const canvas   = document.getElementById('canvas');
+const ctx      = canvas.getContext('2d');
+const noFace   = document.getElementById('no-face-overlay');
+const badge    = document.getElementById('face-badge');
+const countLbl = document.getElementById('face-count-label');
+const modelLbl = document.getElementById('model-label');
+const modelSpin= document.getElementById('model-spin');
+
+// ─── Load model in background ───────────────────────────
+async function loadModel() {
+  try {
+    model = await blazeface.load();
+    modelSpin.classList.remove('active');
+    modelLbl.textContent = 'AI Ready';
+    setTimeout(() => {
+      document.getElementById('model-badge').style.opacity = '0';
+      document.getElementById('model-badge').style.transition = 'opacity 0.5s';
+    }, 1500);
+  } catch(e) {
+    modelLbl.textContent = 'Model Error';
+    console.error('BlazeFace load failed:', e);
+  }
+}
+
+// ─── Start/Restart camera ────────────────────────────────
+async function startCamera() {
+  document.getElementById('perm-error').style.display = 'none';
+  try {
+    if(currentStream) {
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+    const constraints = {
+      video: {
+        facingMode: facingMode,
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    };
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+
+    // Mirror front cam, don't mirror back cam
+    if(facingMode === 'user') {
+      video.classList.remove('back-cam');
+    } else {
+      video.classList.add('back-cam');
+      // show torch button for back cam
+      document.getElementById('torch-btn').style.display = 'flex';
+    }
+
+    await video.play();
+
+    // Hide permission screen
+    document.getElementById('perm-screen').classList.add('hidden');
+
+    // Sync canvas size on load
+    video.addEventListener('loadedmetadata', syncCanvasSize, { once: true });
+
+    // Start detection loop
+    if(animFrame) cancelAnimationFrame(animFrame);
+    detectLoop();
+
+    // Load model in parallel
+    if(!model) loadModel();
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('perm-error').style.display = 'block';
+  }
+}
+
+function syncCanvasSize() {
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+}
+
+// ─── Detection Loop ───────────────────────────────────────
+async function detectLoop() {
+  if(video.readyState < 2) {
+    animFrame = requestAnimationFrame(detectLoop);
+    return;
+  }
+
+  // Sync canvas to video
+  if(canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    syncCanvasSize();
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if(model) {
+    try {
+      const predictions = await model.estimateFaces(video, false);
+      drawPredictions(predictions);
+
+      const faceCount = predictions.length;
+      if(faceCount === 0) {
+        noFace.classList.add('visible');
+        badge.classList.remove('face-on');
+        countLbl.textContent = 'No face';
+      } else {
+        noFace.classList.remove('visible');
+        badge.classList.add('face-on');
+        countLbl.textContent = faceCount === 1 ? '1 Face Detected' : `${faceCount} Faces`;
+      }
+    } catch(e) {
+      // pass – frame skipped
+    }
+  }
+
+  animFrame = requestAnimationFrame(detectLoop);
+}
+
+// ─── Draw bounding boxes ─────────────────────────────────
+function drawPredictions(preds) {
+  const scaleX = canvas.width  / (video.videoWidth  || canvas.width);
+  const scaleY = canvas.height / (video.videoHeight || canvas.height);
+
+  preds.forEach(pred => {
+    const [x1, y1] = pred.topLeft;
+    const [x2, y2] = pred.bottomRight;
+
+    let bx = x1 * scaleX;
+    let by = y1 * scaleY;
+    let bw = (x2 - x1) * scaleX;
+    let bh = (y2 - y1) * scaleY;
+
+    // Mirror horizontally for front cam mirroring
+    if(facingMode === 'user') {
+      bx = canvas.width - bx - bw;
+    }
+
+    // Glow box
+    ctx.save();
+    ctx.shadowColor = '#10b981';
+    ctx.shadowBlur  = 14;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth   = 2.5;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    // Corner accents
+    const cs = Math.min(bw, bh) * 0.2;
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = '#34d399';
+    // Top-left
+    ctx.beginPath(); ctx.moveTo(bx, by + cs); ctx.lineTo(bx, by); ctx.lineTo(bx + cs, by); ctx.stroke();
+    // Top-right
+    ctx.beginPath(); ctx.moveTo(bx + bw - cs, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cs); ctx.stroke();
+    // Bottom-left
+    ctx.beginPath(); ctx.moveTo(bx, by + bh - cs); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cs, by + bh); ctx.stroke();
+    // Bottom-right
+    ctx.beginPath(); ctx.moveTo(bx + bw - cs, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cs); ctx.stroke();
+
+    ctx.restore();
+
+    // Confidence label
+    const score = pred.probability ? (pred.probability[0] * 100).toFixed(0) : null;
+    if(score) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(5,10,20,0.7)';
+      const label = `Face · ${score}%`;
+      ctx.font = 'bold 13px Inter, sans-serif';
+      const tw = ctx.measureText(label).width;
+      ctx.beginPath();
+      ctx.roundRect(bx, Math.max(by - 26, 2), tw + 16, 22, 6);
+      ctx.fill();
+      ctx.fillStyle = '#34d399';
+      ctx.fillText(label, bx + 8, Math.max(by - 9, 16));
+      ctx.restore();
+    }
+
+    // Key points
+    if(pred.landmarks) {
+      pred.landmarks.forEach(([lx, ly]) => {
+        let px = lx * scaleX;
+        let py = ly * scaleY;
+        if(facingMode === 'user') px = canvas.width - px;
+        ctx.save();
+        ctx.fillStyle = 'rgba(96,165,250,0.8)';
+        ctx.shadowColor = '#3b82f6';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+  });
+}
+
+// ─── Flip camera ─────────────────────────────────────────
+function flipCamera() {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  if(facingMode === 'user') {
+    torchOn = false;
+    document.getElementById('torch-btn').style.display = 'none';
+  }
+  startCamera();
+}
+
+// ─── Torch / Flashlight ──────────────────────────────────
+async function toggleTorch() {
+  if(!currentStream) return;
+  const track = currentStream.getVideoTracks()[0];
+  if(!track || !track.getCapabilities) return;
+  const caps = track.getCapabilities();
+  if(!caps.torch) return;
+  torchOn = !torchOn;
+  await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+  document.getElementById('torch-btn').style.color = torchOn ? '#fbbf24' : '#e2e8f0';
+}
+
+// ─── Auto-start on page load ─────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    startCamera();
+  }
+});
+</script>
+</body>
+</html>

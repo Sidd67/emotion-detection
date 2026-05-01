@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emotion AI — Desktop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --glass: rgba(255,255,255,0.05);
+      --border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      min-height: 100vh;
+      background: #050a14;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ambient blobs */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .blob-1 { width: 500px; height: 500px; top: -120px; left: -120px; background: rgba(59,130,246,0.18); }
+    .blob-2 { width: 400px; height: 400px; bottom: -80px; right: -80px; background: rgba(139,92,246,0.18); }
+    .blob-3 { width: 300px; height: 300px; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(16,185,129,0.06); }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+      padding: 24px;
+    }
+
+    /* header */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 22px;
+    }
+    .brand-name {
+      font-size: 26px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #60a5fa, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 500;
+      color: #64748b;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* card */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(24px);
+      border-radius: 28px;
+      padding: 48px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.3px;
+      text-align: center;
+    }
+
+    /* QR wrapper with pulse rings */
+    .qr-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pulse-ring {
+      position: absolute;
+      border-radius: 28px;
+      border: 2px solid rgba(59,130,246,0.5);
+      animation: pulse-ring 2.4s ease-out infinite;
+    }
+    .pulse-ring:nth-child(2) { animation-delay: 0.8s; }
+    .pulse-ring:nth-child(3) { animation-delay: 1.6s; }
+    @keyframes pulse-ring {
+      0%   { width: 220px; height: 220px; opacity: 0.8; }
+      100% { width: 320px; height: 320px; opacity: 0; }
+    }
+
+    .qr-frame {
+      position: relative;
+      z-index: 2;
+      padding: 16px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow:
+        0 0 0 2px rgba(59,130,246,0.4),
+        0 0 40px rgba(59,130,246,0.25),
+        0 20px 60px rgba(0,0,0,0.4);
+    }
+    #qr-img {
+      width: 200px; height: 200px;
+      display: block;
+      border-radius: 8px;
+    }
+    .qr-loading {
+      width: 200px; height: 200px;
+      display: flex; align-items: center; justify-content: center;
+      color: #475569; font-size: 14px;
+    }
+
+    /* steps */
+    .steps {
+      display: flex;
+      gap: 24px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+      max-width: 110px;
+    }
+    .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      display: grid; place-items: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .step-text {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* status badge */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 999px;
+      padding: 8px 20px;
+      font-size: 13px;
+      color: #10b981;
+      font-weight: 500;
+      transition: all 0.4s;
+    }
+    .status-bar.error {
+      background: rgba(239,68,68,0.1);
+      border-color: rgba(239,68,68,0.2);
+      color: #ef4444;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      background: currentColor;
+      border-radius: 50%;
+      animation: dot-blink 1.2s ease-in-out infinite;
+    }
+    @keyframes dot-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .url-chip {
+      font-size: 12px;
+      color: #475569;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-family: monospace;
+      transition: all 0.3s;
+    }
+    .url-chip span { color: #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <div class="container">
+    <!-- Brand -->
+    <div>
+      <div class="brand">
+        <div class="brand-icon">🧠</div>
+        <div>
+          <div class="brand-name">EmotionAI</div>
+          <div class="brand-tag">Real-Time Detection System</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+      <div class="card-title">📱 Scan this QR code to start face detection on your phone</div>
+
+      <!-- QR -->
+      <div class="qr-wrapper">
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring"></div>
+        <div class="pulse-ring"></div>
+        <div class="qr-frame">
+          <div class="qr-loading" id="qr-placeholder">Loading QR…</div>
+          <img id="qr-img" src="" alt="QR Code" style="display:none; width:200px; height:200px;" onload="this.style.display='block'; document.getElementById('qr-placeholder').style.display='none';">
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Open your phone camera or QR app</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Scan the QR code above</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Tap "Start Scan" and allow camera</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status + URL -->
+    <div id="status-bar" class="status-bar error">
+      <span class="status-dot"></span>
+      <span id="status-text">Connecting to server…</span>
+    </div>
+    <div class="url-chip" id="url-chip">Loading mobile URL…</div>
+  </div>
+
+  <script>
+    const qrImg    = document.getElementById('qr-img');
+    const statusBar = document.getElementById('status-bar');
+    const statusText = document.getElementById('status-text');
+    const urlChip  = document.getElementById('url-chip');
+
+    function loadQR() {
+      qrImg.src = '/qr?' + Date.now();
+    }
+
+    async function checkStatus() {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        statusBar.classList.remove('error');
+        statusText.textContent = 'Server online · Model: VGG16 FER';
+        urlChip.innerHTML = `http://<span>${d.ip}</span>:8000/mobile`;
+        loadQR();
+      } catch {
+        statusBar.classList.add('error');
+        statusText.textContent = 'Server offline — please restart the backend';
+      }
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 30000); // refresh every 30s
+  </script>
+</body>
+</html>

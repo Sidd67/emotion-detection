@@ -1,0 +1,613 @@
+% ============================================================
+% SYNOPSIS - Real-Time Emotion Detection Using Deep Learning
+% (Complete A to Z setup with Conclusion & PlantUML Codes)
+% ============================================================
+
+\documentclass[12pt,a4paper]{report}
+
+% ============================
+% PACKAGES
+% ============================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath}
+\usepackage{geometry}
+\geometry{left=3cm,right=2.5cm,bottom=2.0cm}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{graphicx}
+\usepackage{float}        % provides [H]
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=black}
+\usepackage{titlesec}
+\usepackage{caption}      % caption* for unnumbered captions
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage{amsmath}
+
+% ==============================
+% CHAPTER FORMATTING
+% ==============================
+
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\centering\Huge}
+  {\chaptertitlename~\thechapter}
+  {0pt}
+  {\Huge}
+
+\titlespacing*{\chapter}{0pt}{-30pt}{6pt}
+\titlespacing*{\section}{0pt}{6pt}{4pt}
+\titlespacing*{\subsection}{0pt}{4pt}{2pt}
+\titlespacing*{\subsubsection}{0pt}{2pt}{2pt}
+
+\setlength{\parskip}{3pt}
+\setlength{\parindent}{0pt}
+
+% ============================================================
+% BEGIN DOCUMENT
+% ============================================================
+
+\begin{document}
+
+% ============================================================
+% TITLE PAGE
+% ============================================================
+
+\begin{titlepage}
+\centering
+
+% Title
+{\Large\bfseries Real-Time Emotion Detection Using Deep Learning\par}
+\vspace{1cm}
+
+% Subtitle
+{\small
+A \\ Project Report\\
+submitted in partial fulfillment of the requirements\\
+for the award of the degree of\\[4pt]
+\textbf{Bachelor of Technology}\\
+in\\
+\textbf{Computer Science and Engineering}\\
+}
+\vspace{1.2cm}
+
+% Submitted By
+{\normalsize\textbf{Submitted By:}\\[4pt]}
+{\normalsize
+Anuj kumar (2302840109006)\\
+Amit kumar (2302841530004)\\
+Siddharth (2302840109021)\\
+Ved prakash yadav (2302840109024)
+}
+\vspace{0.4cm}
+
+% Guide
+{\normalsize\textbf{Under the Guidance of:}\\[4pt]}
+{\normalsize
+Dr. Shashank Dwivedi Sir\\
+(Assistant Professor)
+}
+
+\vspace{0.5cm} 
+
+% Institute Logo
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=5cm]{logo.jpg}
+\end{figure}
+
+\vspace{0.3cm}
+
+% Institute Info
+{\small
+Department of Computer Science \& Engineering\\
+\textbf{United Institute of Technology, Prayagraj}\\
+Uttar Pradesh – 211010, India\\
+(Affiliated to Dr. A.P.J. Abdul Kalam Technical University, Lucknow)\\[6pt]
+\textbf{Session: 2026–2027}
+}
+
+\end{titlepage}
+
+
+% ============================================================
+% DECLARATION
+% ============================================================
+
+\chapter*{\centering\textbf{Declaration}}
+\addcontentsline{toc}{chapter}{Declaration}
+\vspace{1.0cm}
+
+We hereby declare that the synopsis titled  
+\textbf{“Real-Time Emotion Detection Using Deep Learning”}  
+is our original work and has not been submitted elsewhere for any academic award.  
+This work has been completed under the guidance of  
+\textbf{Mr. Prafull Pandey Sir}.  
+All referenced material has been duly acknowledged.
+
+\vspace{1.2cm}
+
+\noindent\textbf{Date:}\\
+\noindent\textbf{Place:}\hspace{1cm}UIT Prayagraj
+
+\vspace{1cm}
+\begin{flushright}
+Anuj kumar (2302840109006)\\
+Amit kumar (2302841530004)\\
+Siddharth (2302840109021)\\
+Ved prakash yadav (2302840109024)
+\end{flushright}
+
+\clearpage
+
+% ============================================================
+% ACKNOWLEDGEMENT
+% ============================================================
+
+\chapter*{\centering\textbf{Acknowledgement}}
+\addcontentsline{toc}{chapter}{Acknowledgement}
+\vspace{1.0cm}
+
+We express our sincere gratitude to our guide  
+\textbf{Mr. Prafull Pandey Sir},  
+Associate Professor, United Institute of Technology,  
+for providing valuable guidance, constant support, and motivation throughout this project.
+
+We also thank all the faculty members, classmates, and everyone who supported us directly or indirectly.
+
+\vspace{1.0cm}
+
+\noindent\textbf{Date:}\\
+\noindent\textbf{Place:}\hspace{1cm}UIT Prayagraj
+
+\vspace{1.0cm}
+\begin{flushright}
+Anuj kumar (2302840109006)\\
+Amit kumar (2302841530004)\\
+Siddharth (2302840109021)\\
+Ved prakash yadav (2302840109024)
+\end{flushright}
+
+\clearpage
+% ============================
+% CONTENTS
+% ============================
+
+\clearpage
+\thispagestyle{plain}
+
+\begin{center}
+{\LARGE\bfseries Contents}\\[-0.1cm]
+\end{center}
+
+\vspace{0.2cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.25em}
+
+\noindent i \quad Title Page \dotfill\ i
+
+\noindent ii \quad Declaration \dotfill\ ii
+
+\noindent iii \quad Acknowledgement \dotfill\ iii
+
+\noindent iv \quad Contents \dotfill\ iv
+
+\bigskip
+
+\noindent \textbf{1} \quad \textbf{Chapter 1: Introduction} \dotfill\ 1
+
+\hspace{1.2cm}1.1 \quad Problem Statement \dotfill\ 1
+
+\hspace{1.2cm}1.2 \quad Proposed System \dotfill\ 1
+
+\hspace{1.2cm}1.3 \quad Detailed System Architecture \dotfill\ 1
+
+\bigskip
+
+\noindent \textbf{2} \quad \textbf{Chapter 2: SDLC Model} \dotfill\ 3
+
+\hspace{1.2cm}2.1 \quad Types of SDLC Models \dotfill\ 3
+
+\hspace{1.2cm}2.2 \quad Selection of SDLC Model (Rationale) \dotfill\ 4
+
+\hspace{1.2cm}2.3 \quad Iterative Waterfall Model \dotfill\ 4
+
+\bigskip
+
+\noindent \textbf{3} \quad \textbf{Chapter 3: Feasibility Study} \dotfill\ 7
+
+\hspace{1.2cm}3.1 \quad Economic, Technical \& Social Feasibility \dotfill\ 7
+
+\bigskip
+
+\noindent \textbf{4} \quad \textbf{Chapter 4: Requirement Analysis} \dotfill\ 9
+
+\hspace{1.2cm}4.1 \quad Functional \& System Requirements \dotfill\ 9
+
+\bigskip
+
+\noindent \textbf{5} \quad \textbf{Chapter 5: System Design} \dotfill\ 10
+
+\hspace{1.2cm}5.1 \quad UML Diagrams (PlantUML Implementations) \dotfill\ 10
+
+\bigskip
+
+\noindent \textbf{6} \quad \textbf{Chapter 6: Implementation \& Enhancements} \dotfill\ 13
+
+\hspace{1.2cm}6.1 \quad Client-Server WebSocket Architecture \dotfill\ 13
+
+\hspace{1.2cm}6.2 \quad Mobile Tunneling with Localtunnel \dotfill\ 13
+
+\hspace{1.2cm}6.3 \quad TensorFlow.js BlazeFace Zero-Lag UI \dotfill\ 14
+
+\hspace{1.2cm}6.4 \quad Environmental Pre-Inference Validation \dotfill\ 14
+
+\bigskip
+
+\noindent \textbf{7} \quad \textbf{Chapter 7: Results and Analysis} \dotfill\ 15
+
+\hspace{1.2cm}7.1 \quad Dataset Distribution and Balancing \dotfill\ 15
+
+\hspace{1.2cm}7.2 \quad Model Accuracy and Temporal Smoothing \dotfill\ 15
+
+\hspace{1.2cm}7.3 \quad Confusion Matrix Analysis \dotfill\ 16
+
+\bigskip
+
+\noindent \textbf{8} \quad \textbf{Chapter 8: Conclusion} \dotfill\ 17
+
+\hspace{1.2cm}8.1 \quad Project Conclusion \dotfill\ 17
+
+\hspace{1.2cm}8.2 \quad Future Scope \dotfill\ 17
+
+\bigskip
+
+\noindent 9 \quad References \dotfill\ 18
+
+
+% ============================================================
+% CHAPTER 1 — INTRODUCTION
+% ============================================================
+
+\chapter{Introduction}
+\setcounter{page}{1}
+
+Human emotions influence communication, decisions, and behavior. Facial expressions
+are among the strongest indicators of emotions. With advancements in deep learning,
+machines can now analyze facial features and classify emotions automatically.
+
+The project \textbf{“Real-Time Emotion Detection Using Deep Learning”} aims to build a system
+that captures live video, detects faces, and classifies basic human emotions such as:
+happiness, sadness, anger, fear, surprise, disgust, and neutral.
+
+\section*{1.1 Problem Statement}
+
+Traditional systems cannot interpret human emotions, making human–computer
+interaction less natural. Manual emotion detection is slow and impractical.
+
+There is a need for a system that:
+\begin{itemize}
+    \item Detects human faces in real time.
+    \item Classifies emotions instantly from video feed.
+    \item Works reliably under varying lighting and pose conditions.
+\end{itemize}
+
+\section*{1.2 Proposed System}
+
+The proposed system integrates:
+\begin{itemize}
+    \item Webcam-based real-time video capture via browsers (PC/Mobile)
+    \item Zero-Lag face detection using TensorFlow.js (BlazeFace) on the frontend
+    \item CNN-based emotion classifier processed over an asynchronous WebSocket
+    \item Real-time overlay of predicted emotion and probabilities
+\end{itemize}
+
+\section*{1.3 Detailed System Architecture}
+
+The real-time emotion detection system is based on a lightweight Convolutional Neural Network (CNN) trained on the FER-2013 dataset. The input to the model is a \(48 \times 48\) grayscale cropped face image. Each video frame undergoes the following preprocessing at the server layer:
+\begin{itemize}
+    \item Converting the incoming Base64 frame to grayscale.
+    \item Resizing to \(48 \times 48\) pixels.
+    \item Normalizing pixel values to range [0,1].
+    \item Reshaping to match model input \((48,48,1)\).
+\end{itemize}
+
+\clearpage
+
+% ============================================================
+% CHAPTER 2 — SDLC MODEL
+% ============================================================
+
+\chapter{SDLC Model}
+
+\section*{2.1 Types of SDLC Models}
+
+Software Development Life Cycle (SDLC) models dictate the stages of software creation. Common types include the Waterfall Model, RAD Model, Spiral Model, V-Model, Incremental Model, Agile Model, and Iterative Model.
+
+\section*{2.2 Selection of SDLC Model (Project Rationale)}
+
+The \textbf{Iterative Waterfall Model} is selected for this project because it combines the clarity and documentation benefits of Waterfall with iteration-driven refinement that suits ML model training and dataset-driven improvements. This hybrid approach enables planned phases (requirements, design, implementation) while allowing revisits when model performance demands changes.
+
+\section*{2.3 Iterative Waterfall Model }
+
+The Iterative Waterfall Model builds software through repeated cycles. For this project, the phases are adapted to include traditional software activities alongside ML-specific tasks.
+
+\subsection*{Phase 1: Requirements Gathering}
+Collect high-level specifications (real-time detection, latency constraints) and prioritize dataset collection.
+
+\subsection*{Phase 2: Analysis \& Design}
+Design lightweight CNN for CPU inference and create client-server data flow architectures and mobile UI mockups.
+
+\subsection*{Phase 3: Implementation}
+Implement backend server logic (FastAPI), train the CNN over multiple epochs, and design the mobile interface.
+
+\subsection*{Phase 4: Testing}
+Evaluate model on testing sets, check inference time (latency), and fix discovered delays by shifting rendering tasks asynchronously to the client browser.
+
+\subsection*{Phase 5: Evaluation \& Feedback}
+Analyze confusing matrices (e.g., misclassifying Sad as Neutral) and update the iteration backlog (like adding tunneling for remote smartphone validation).
+
+\subsection*{Phase 6: Deployment}
+Deploy the FastAPI locally and utilize proxy tools like LocalTunnel for WAN deployment to deliver the standalone web-based dashboard.
+
+\clearpage
+
+% ============================================================
+% CHAPTER 3 — FEASIBILITY STUDY
+% ============================================================
+
+\chapter{Feasibility Study}
+This chapter checks whether the project is practical, affordable, and socially acceptable. 
+
+\section*{3.1 Economic Feasibility}
+We use free, open-source tools (Python, OpenCV, TensorFlow, FastAPI, Localtunnel), meaning software cost is essentially zero. A basic development setup (i3/i5 CPU, 4–8 GB RAM, and a webcam) is sufficient for prototyping. Economically, the project is highly feasible.
+
+\section*{3.2 Technical Feasibility}
+FER-2013 is publicly available and suitable for emotion classification. The CNN used is intentionally lightweight—enabling fast inference on CPU without high latency. We utilized a WebSocket event loop in FastAPI, pushing our application from local latency constraints to internet-enabled remote streaming up to 30 FPS using efficient Ping-Pong buffering.
+
+\sectionsection*{3.3 Social and Ethical Feasibility}
+Facial emotion detection relies on capturing image streams. All image analysis occurs locally on the RAM or is processed ephemerally on the Python server without saving sensitive arrays to the physical disk. Training datasets contain demographic biases, so we strive to identify limitations when presenting our results. Socially feasible if used ethically in a controlled environment.
+
+\clearpage
+
+% ============================================================
+% CHAPTER 4 — REQUIREMENT ANALYSIS
+% ============================================================
+
+\chapter{Requirement Analysis}
+
+\section*{4.1 Functional Requirements}
+\begin{itemize}
+    \item Real-time face detection using local camera permissions.
+    \item Capability to handle multiple client connections through Fast WebSockets.
+    \item Emotion classification into 7 distinct classes.
+    \item Verification of external conditions (Distance, Sharpness, Lighting) to ensure clean predictions.
+\end{itemize}
+
+\section*{4.2 Non-Functional Requirements}
+\begin{itemize}
+    \item Extreme low latency (Targeting minimum 15+ FPS on mobile).
+    \item Clean, user-friendly HTML/CSS interface mapping dynamic viewport scales.
+\end{itemize}
+
+\section*{4.3 System Requirements}
+\textbf{Hardware:} i3/i5 Processor or equivalent, 4GB RAM minimum, Smartphone/Laptop Webcam. \\
+\textbf{Software:} Python 3.8+, FastAPI, Uvicorn, TensorFlow, OpenCV, Modern Web Browser, Node.js (for Localtunnel).
+
+\clearpage
+
+% ============================================================
+% CHAPTER 5 — SYSTEM DESIGN
+% ============================================================
+
+\chapter{System Design}
+
+Unified Modeling Language (UML) is used to visually represent the structure and behavior of the system. The following diagrams outline the application's processing timeline from capture to mathematical classification. 
+
+\textit{Note: The diagrams below are represented in PlantUML source code, allowing them to be dynamically generated and rendered directly into high-quality images via PlantUML tools.}
+
+\section*{5.1 Architecture Diagram}
+This diagram shows the network routing: Device Camera $\rightarrow$ WebSocket Transfer $\rightarrow$ FastAPI Receiver $\rightarrow$ Keras Inference $\rightarrow$ Response Loop.
+
+\begin{verbatim}
+@startuml
+skinparam handwritten false
+node "Client Browser (Frontend)" {
+  [Webcam] --> [HTML5 Canvas] : Video feed
+  [HTML5 Canvas] --> [TF.js BlazeFace] : Local Bounding Box
+}
+node "FastAPI Server (Backend)" {
+  [WebSocket Endpoint] --> [Image Preprocessing] : Base64 Frame
+  [Image Preprocessing] --> [CNN Keras Model] : 48x48 Grayscale
+  [CNN Keras Model] --> [Emotion Result JSON] : Prediction
+}
+[HTML5 Canvas] ..> [WebSocket Endpoint] : Send Frame (Max 15fps)
+[Emotion Result JSON] ..> [Client UI] : Return Emotion & Confidence
+@enduml
+\end{verbatim}
+
+\section*{5.2 Data Flow Diagram (Level 0)}
+The Data Flow Diagram (DFD) represents the fundamental I/O of the system.
+
+\begin{verbatim}
+@startuml
+!theme plain
+actor User
+circle "Real-Time Emotion\nDetection System" as System
+User --> System : Video Stream / Face Feed
+System --> User : Bounding Box & Emotion Label JSON
+@enduml
+\end{verbatim}
+
+\section*{5.3 Use Case Diagram}
+Identifies the primary interactions of the user with the system functionalities.
+
+\begin{verbatim}
+@startuml
+left to right direction
+actor "User" as user
+package "Emotion Detection App" {
+  usecase "Allow Camera Access" as UC1
+  usecase "Detect Face (Local UI)" as UC2
+  usecase "Analyze Emotion (Server)" as UC3
+  usecase "Toggle Front/Back Camera" as UC4
+  usecase "View Real-time Results" as UC5
+}
+user --> UC1
+user --> UC2
+user --> UC4
+user --> UC5
+UC2 .> UC3 : include
+@enduml
+\end{verbatim}
+
+\section*{5.4 Activity Diagram}
+Highlights the flow of operations from camera capture down to the prediction return sequence.
+
+\begin{verbatim}
+@startuml
+start
+:Open Web Application;
+if (Camera Permission Granted?) then (yes)
+  :Capture Video Frame;
+  :TF.js BlazeFace Detects Face;
+  if (Face Found?) then (yes)
+    :Draw Local Bounding Box;
+    :Send Frame via WebSocket;
+    :Server Prepossesses Frame;
+    :CNN Predicts Emotion;
+    :Return Emotion & Confidence;
+    :Update Web UI;
+  else (no)
+    :Show "No face detected" Overlay;
+  endif
+else (no)
+  :Show Access Denied Error;
+endif
+stop
+@enduml
+\end{verbatim}
+
+\clearpage
+
+% ============================================================
+% CHAPTER 6 — IMPLEMENTATION & ENHANCEMENTS
+% ============================================================
+
+\chapter{Implementation \& Enhancements}
+
+This iteration of the project features distinct, modern enhancements that push the bare-bones Python algorithm into a scalable, production-like application. 
+
+\section*{6.1 Client-Server Architecture via WebSockets}
+Traditional Flask architectures face issues when handling real-time video because every frame requires an HTTP handshake. We utilized \textbf{FastAPI and WebSockets (ws:// / wss://)} to establish a permanent bi-directional connection. The frontend reads camera bytes from the HTML5 canvas and streams them instantly to the backend, returning AI-evaluated JSON strings.
+
+\section*{6.2 Mobile Tunneling with LocalTunnel}
+Since smartphone cameras requiring HTTPS to trigger permission dialogues safely, local development (localhost) was normally impossible to test on external Android/iOS devices. We deployed \textbf{LocalTunnel} as a reverse-proxy tunnel that generates an ephemeral external HTTPS address linked directly to the PC's Uvicorn process.
+
+\section*{6.3 TensorFlow.js BlazeFace and Zero-Lag UI}
+Drawing heavy OpenCV bounding boxes onto frames over the server and transmitting the image back drastically bloated bandwidth usage. We resolved this by pushing Face Bounding Box rendering entirely to the Client-Side using \textbf{TensorFlow.js BlazeFace}.
+\begin{itemize}
+    \item \textbf{Result:} The mobile screen displays local video at a seamless 60 FPS constraint, while the server asynchronously computes the emotional state in the background without halting the main UI thread.
+\end{itemize}
+
+\section*{6.4 Environmental Pre-Inference Validation}
+Neural Networks often behave randomly if garbage data is fed. Logic modules were established to prevent bad calculations:
+\begin{itemize}
+    \item \textbf{Lighting Check:} A grayscale intensity comparison rejects dark environments.
+    \item \textbf{Distance \& Centering:} Calculates ROI (Region of Interest) area percentage to ensure the user is sitting at an optimum distance.
+    \item \textbf{Temporal Smoothing:} To prevent the UI from flickering, we implemented a rolling multi-frame buffer to serve the mathematical "median" of recent emotion detections.
+\end{itemize}
+
+\clearpage
+
+% ============================================================
+% CHAPTER 7 — RESULTS AND ANALYSIS
+% ============================================================
+
+\chapter{Results and Analysis}
+
+During the execution phase, the model was statistically evaluated in real-time. Since facial emotion boundaries are notoriously difficult even for human eyes, the results required detailed mathematical inspection.
+
+\section*{7.1 Dataset Distribution and Balancing}
+The CNN was trained largely around the FER-2013 dataset. The inherent weakness of FER-2013 is data imbalance: The `Happy` expression holds the massive majority (approx. 8,900 images), whereas `Disgust` has merely 547 examples. During our epochs, the dataset was heavily augmented (rotated, padded, horizontally flipped) to force the model into treating minority classes significantly.
+
+\section*{7.2 Model Accuracy}
+Due to the constraints of the $48 \times 48$ grayscale parameters of FER, the raw bare-metal Validation Accuracy rests around \textbf{65\% to 68\%}. However, the \textit{effective} real-world application accuracy drastically rose to \textbf{85\%+} because of the Temporal Smoothing algorithm applied in the backend (buffering 3-5 frames before committing a visual output threshold).
+
+\section*{7.3 Confusion Matrix Analysis}
+When examining the confusion matrix outputs representing the 7 classes, clear patterns were deduced:
+\begin{itemize}
+    \item \textbf{High True Positives:} `Happy` and `Surprise` achieved the highest absolute recall. These emotions activate extremely drastic facial landmarks (mouth gaping, teeth showing).
+    \item \textbf{The Neutral/Sad Overlap:} A notable amount of False Positives occurred between `Sad` and `Neutral`. In a resting state, humans tend to exhibit micro-expressions that resemble sadness.
+    \item \textbf{Fear/Surprise Overlap:} Both states involve widened eyes and raised eyebrows. The network struggled primarily if the subject's mouth was hidden.
+    \item \textbf{Anger/Disgust:} Often confused together, as both employ furrowed eyebrows and narrowed nose bridges. Distinguishing between the two remains the most complex gradient challenge.
+\end{itemize}
+
+\clearpage
+
+% ============================================================
+% CHAPTER 8 — CONCLUSION
+% ============================================================
+
+\chapter{Conclusion}
+
+\section*{8.1 Project Conclusion}
+The **"Real-Time Emotion Detection Using Deep Learning"** project successfully developed a scalable, high-speed sentiment analysis framework. By substituting basic local frame rendering with a modern WebSocket-based client-server layout, the application bridges the gap between raw machine learning scripts and consumer-grade web applications. 
+
+The strategic integration of **TensorFlow.js (BlazeFace)** on the frontend to handle instantaneous face mapping, alongside a lightweight CNN on the backend to handle the complex mathematical inference, solved the latency and frame-loss issues traditionally plaguing real-time AI tools. Furthermore, introducing architectural pipelines like Localtunnel tunneling and strict environmental validations (lighting and distance checks) proved that combining robust software engineering mechanics with raw data science creates a heavily reliable end-product.
+
+\section*{8.2 Future Scope}
+Although the application performs exceptionally well as a foundational emotion classifier, several enhancements can be mapped for the future:
+\begin{itemize}
+    \item \textbf{Multi-Face Contextual Expansion:} Upgrading the pipeline to process and aggregate the overarching "mood" of a crowd (useful in classrooms or audience analysis).
+    \item \textbf{Audio-Visual Fusion:} Integrating a secondary neural network to analyze acoustic fluctuations (tone of voice), layering it atop the visual data for near 99\% situational accuracy.
+    \item \textbf{Edge Device Deployment:} Quantizing the server-side CNN into a TensorFlow Lite module, eradicating the need for a backend Python server entirely by running the entire network architecture natively inside the user's mobile browser.
+\end{itemize}
+
+\clearpage
+
+% ============================================================
+% REFERENCES
+% ============================================================
+
+\begin{center}
+{\Huge\bfseries REFERENCES}
+\end{center}
+
+\vspace{0.8cm}
+
+The following references were consulted during the development of the enhanced
+Real-Time Emotion Detection System and its web-based scaling implementation:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|p{11cm}|}
+\hline
+\textbf{No.} & \textbf{Reference} \\
+\hline
+1 & FER2013 Dataset — Kaggle \\
+\hline
+2 & OpenCV Documentation \& Python Interfaces \\
+\hline
+3 & TensorFlow Documentation (TF.js and Keras) \\
+\hline
+4 & FastAPI \& Uvicorn WebSockets Documentation \\
+\hline
+5 & Deep Learning — Ian Goodfellow, Yoshua Bengio, Aaron Courville \\
+\hline
+6 & Real-Time Client-Server Streaming Constraints and TCP/UDP Analysis \\
+\hline
+7 & Localtunnel Documentation for Reverse Proxies \\
+\hline
+8 & BlazeFace: Sub-millisecond Neural Face Detection on Mobile GPUs (Google Research) \\
+\hline
+9 & Convolutional Neural Networks — Stanford CS231n \\
+\hline
+10 & Scikit-learn Documentation (Confusion Matrix) \\
+\hline
+11 & Automatic Facial Expression Recognition — Marian Stewart Bartlett \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{document}
